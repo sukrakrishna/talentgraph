@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Bot, LoaderCircle, Send, UserRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,10 +29,12 @@ const SUGGESTIONS = [
 ];
 
 export function AssistantClient() {
+  const searchParams = useSearchParams();
+  const presetPrompt = searchParams.get("prompt") ?? "";
   const [employees, setEmployees] = useState<EmployeeSummary[]>([]);
   const [employeeId, setEmployeeId] = useState(DEFAULT_EMPLOYEE_ID);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(presetPrompt);
   const [loading, setLoading] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(true);
   const [error, setError] = useState<string | null>(null);

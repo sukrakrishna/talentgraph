@@ -108,6 +108,30 @@ export interface Database {
         Update: Partial<{ hash: string; json: unknown; created_at: string }>;
         Relationships: [];
       };
+      audit_logs: {
+        Row: {
+          id: string;
+          employee_id: string;
+          action: "confirmed" | "not_accurate";
+          skill_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          employee_id: string;
+          action: "confirmed" | "not_accurate";
+          skill_id: string;
+          created_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          employee_id: string;
+          action: "confirmed" | "not_accurate";
+          skill_id: string;
+          created_at: string;
+        }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

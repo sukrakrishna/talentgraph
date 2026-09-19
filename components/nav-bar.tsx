@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { JudgeSandbox } from "@/components/judge-sandbox";
 
 const TABS = [
   { href: "/", label: "Profile" },
@@ -46,6 +47,7 @@ export function NavBar() {
             );
           })}
         </nav>
+        <JudgeSandbox />
         <ThemeToggle className="ml-auto sm:ml-0" />
       </div>
     </header>

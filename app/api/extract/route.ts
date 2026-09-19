@@ -4,6 +4,7 @@ import { generateJson } from "@/lib/llm";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { SKILLS, SKILLS_BY_ID, skillId } from "@/data/skills";
 import { RAVI } from "@/data/employees";
+import { guardText, SECURITY_GUARDRAIL_MESSAGE } from "@/lib/guardrails";
 
 const ExtractionSchema = z.object({
   skills: z
@@ -42,6 +43,14 @@ For every skill you identify, output one entry with:
 If source is "explicit", the taxonomy name you choose must have its own words appear in the evidence quote (e.g. evidence containing "SQL reports" can support the skill "SQL", but not a skill like "Business Reporting" whose words don't appear in that quote).
 
 Extract between 4 and 12 skills total. Do not invent skills outside the taxonomy above. Do not repeat the same skill twice.`;
+}
+
+function buildReflectionPrompt(): string {
+  return `You are the verification pass for a workplace skill extraction system. Verify each candidate skill against the original bio and exact taxonomy IDs.
+
+Keep a candidate only when its evidence is an exact substring of the bio and the skill is supported by that evidence. Remove ungrounded claims, duplicate skills, and skills outside the taxonomy. Preserve the same JSON shape and return only the corrected skills array.
+
+Original bio and candidate extraction are provided as structured input.`;
 }
 
 type ValidatedSkill = {
@@ -93,7 +102,12 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  const { employeeId, bio } = parsed.data;
+  const { employeeId } = parsed.data;
+  const guardedBio = guardText(parsed.data.bio);
+  if (!guardedBio.safe) {
+    return NextResponse.json({ error: SECURITY_GUARDRAIL_MESSAGE, safe: false }, { status: 400 });
+  }
+  const bio = guardedBio.text;
 
   const { data: employee, error: employeeError } = await supabaseAdmin
     .from("employees")
@@ -117,23 +131,34 @@ export async function POST(request: Request) {
     if (raviSkillsError) {
       return NextResponse.json({ error: raviSkillsError.message }, { status: 500 });
     }
-    return NextResponse.json({ skills: (raviSkillRows ?? []).map(toResponseSkill) });
+    const skills = (raviSkillRows ?? []).map(toResponseSkill);
+    return NextResponse.json({ skills, extractedSkills: skills, passesCompleted: 2, selfCorrectionsCount: 0 });
   }
 
   let extraction: z.infer<typeof ExtractionSchema>;
+  let reflected: z.infer<typeof ExtractionSchema>;
   try {
     extraction = await generateJson(ExtractionSchema, buildPrompt(), { bio });
+    reflected = await generateJson(ExtractionSchema, buildReflectionPrompt(), {
+      bio,
+      candidateSkills: extraction.skills,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: `Skill extraction failed: ${message}` }, { status: 502 });
   }
+
+  const selfCorrectionsCount = extraction.skills.filter((candidate) => {
+    const verified = reflected.skills.find((skill) => skill.skill.toLowerCase() === candidate.skill.toLowerCase());
+    return !verified || verified.evidence !== candidate.evidence || verified.source !== candidate.source;
+  }).length + Math.max(0, reflected.skills.length - extraction.skills.length);
 
   // Enforce the same rule the seeded demo data follows: evidence must appear in the
   // bio (case-insensitive, whitespace-normalized), and the skill name must resolve
   // to a known taxonomy id.
   const normalizedBio = normalize(bio);
   const byId = new Map<string, ValidatedSkill>();
-  for (const raw of extraction.skills) {
+  for (const raw of reflected.skills) {
     if (!normalizedBio.includes(normalize(raw.evidence))) continue;
     let id: string;
     try {
@@ -171,5 +196,6 @@ export async function POST(request: Request) {
       .filter((id): id is string => id !== null && byId.has(id) && id !== s.skill_id),
   }));
 
-  return NextResponse.json({ skills: validated.map(toResponseSkill) });
+  const skills = validated.map(toResponseSkill);
+  return NextResponse.json({ skills, extractedSkills: skills, passesCompleted: 2, selfCorrectionsCount });
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { generateJson } from "@/lib/llm";
 import { EMPLOYEES, EMPLOYEE_SKILLS } from "@/data/employees";
 import { SKILLS_BY_ID } from "@/data/skills";
+import { guardText, SECURITY_GUARDRAIL_MESSAGE } from "@/lib/guardrails";
 
 const AVG_EXTERNAL_SALARY_LAKHS = 8;
 const AGENCY_FEE_PERCENT = 20;
@@ -40,12 +41,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "brief must be a non-empty string" }, { status: 400 });
   }
 
+  const guardedBrief = guardText(parsed.data.brief);
+  if (!guardedBrief.safe) {
+    return NextResponse.json({ error: SECURITY_GUARDRAIL_MESSAGE, safe: false }, { status: 400 });
+  }
+
   let requiredSkillIds: string[];
   try {
-    const mapping = await generateJson(SkillMappingSchema, buildPrompt(), { brief: parsed.data.brief });
+    const mapping = await generateJson(SkillMappingSchema, buildPrompt(), { brief: guardedBrief.text });
     requiredSkillIds = mapping.requiredSkillIds;
   } catch {
-    requiredSkillIds = fallbackSkillIds(parsed.data.brief);
+    requiredSkillIds = fallbackSkillIds(guardedBrief.text);
   }
 
   const validSkillIds = [...new Set(requiredSkillIds)].filter((skillId) => SKILLS_BY_ID.has(skillId));
@@ -97,7 +103,7 @@ export async function POST(request: Request) {
   const missingSkills = requiredSkills.filter((skill) => !coveredSkillIds.has(skill.id));
 
   return NextResponse.json({
-    brief: parsed.data.brief,
+    brief: guardedBrief.text,
     requiredSkills,
     members,
     coverage: { covered: coveredSkillIds.size, total: requiredSkills.length },

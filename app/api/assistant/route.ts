@@ -5,6 +5,7 @@ import { SKILLS_BY_ID } from "@/data/skills";
 import { scoreEmployeeForRole } from "@/lib/scoring";
 import { generateJson } from "@/lib/llm";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { guardText, SECURITY_GUARDRAIL_MESSAGE } from "@/lib/guardrails";
 
 const DEFAULT_EMPLOYEE_ID = "ravi-k";
 const RequestSchema = z.object({
@@ -133,6 +134,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
+  const guardedMessage = guardText(parsed.data.message);
+  if (!guardedMessage.safe) {
+    return NextResponse.json({ error: SECURITY_GUARDRAIL_MESSAGE, safe: false }, { status: 400 });
+  }
+
   const [{ data: employee, error: employeeError }, { data: skillRows, error: skillsError }] = await Promise.all([
     supabaseAdmin
       .from("employees")
@@ -161,10 +167,10 @@ export async function POST(request: Request) {
     response = await generateJson(
       AssistantResponseSchema,
       buildPrompt(context),
-      { message: parsed.data.message }
+      { message: guardedMessage.text }
     );
   } catch {
-    response = fallbackAnswer(parsed.data.message, context);
+    response = fallbackAnswer(guardedMessage.text, context);
   }
 
   if (!response.inScope) {

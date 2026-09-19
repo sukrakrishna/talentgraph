@@ -48,6 +48,7 @@ export function ProfileClient() {
   const [extracting, setExtracting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [roleScores, setRoleScores] = useState<{ title: string; score: number }[]>([]);
 
   // Loading is derived rather than tracked in its own state: the employee record
   // only ever matches employeeId once its fetch has resolved.
@@ -83,6 +84,7 @@ export function ProfileClient() {
         setSelectedSkill(null);
         setConfirmedSkillIds(new Set());
         setRemovedSkillIds(new Set());
+        setRoleScores([]);
         setError(null);
       })
       .catch((err) => !cancelled && setError(err instanceof Error ? err.message : String(err)));
@@ -118,11 +120,12 @@ export function ProfileClient() {
     [skills]
   );
 
-  function handleConfirm(skillId: string) {
+  async function handleConfirm(skillId: string) {
     setConfirmedSkillIds((prev) => new Set(prev).add(skillId));
+    await verifySkill(skillId, "confirmed");
   }
 
-  function handleNotAccurate(skillId: string) {
+  async function handleNotAccurate(skillId: string) {
     setRemovedSkillIds((prev) => new Set(prev).add(skillId));
     setConfirmedSkillIds((prev) => {
       if (!prev.has(skillId)) return prev;
@@ -131,6 +134,23 @@ export function ProfileClient() {
       return next;
     });
     setSelectedSkill(null);
+    await verifySkill(skillId, "not_accurate");
+  }
+
+  async function verifySkill(skillId: string, action: "confirmed" | "not_accurate") {
+    try {
+      const response = await fetch("/api/skills/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId, skillId, action }),
+      });
+      const data = (await response.json()) as { roleScores?: { title: string; score: number }[]; error?: string };
+      if (!response.ok || data.error) throw new Error(data.error ?? "Verification failed");
+      setRoleScores(data.roleScores ?? []);
+      setNotice(`Saved ${action === "confirmed" ? "confirmation" : "correction"}; role scores updated.`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    }
   }
 
   const reviewedCount = confirmedSkillIds.size + removedSkillIds.size;
@@ -297,6 +317,14 @@ export function ProfileClient() {
                     </li>
                   ))}
                 </ul>
+                {roleScores.length > 0 && (
+                  <div className="border-t border-border pt-3">
+                    <p className="mb-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">Updated role scores</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {roleScores.slice(0, 5).map((role) => <Badge key={role.title} variant="outline">{role.title} {role.score}%</Badge>)}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

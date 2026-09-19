@@ -56,6 +56,14 @@ create table if not exists llm_cache (
   created_at timestamptz not null default now()
 );
 
+create table if not exists audit_logs (
+  id          uuid primary key default gen_random_uuid(),
+  employee_id text not null references employees (id) on delete cascade,
+  action      text not null check (action in ('confirmed', 'not_accurate')),
+  skill_id    text not null references skills (id) on delete cascade,
+  created_at  timestamptz not null default now()
+);
+
 alter table skills disable row level security;
 alter table employees disable row level security;
 alter table employee_skills disable row level security;
@@ -63,3 +71,4 @@ alter table roles disable row level security;
 alter table role_skills disable row level security;
 alter table courses disable row level security;
 alter table llm_cache disable row level security;
+alter table audit_logs disable row level security;

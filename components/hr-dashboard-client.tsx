@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BriefcaseBusiness, Clock3, Coins, Sparkles, Users } from "lucide-react";
+import { BriefcaseBusiness, Clock3, Coins, ClipboardList, Sparkles, Users, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
@@ -24,6 +25,7 @@ interface HrData {
     matchedSkills: string[];
   }[];
   costAvoidance: { rolesFilledInternally: number; avgExternalSalaryLakhs: number; agencyFeePercent: number };
+  auditLogs?: { id: string; employee_id: string; action: string; skillName: string; created_at: string }[];
 }
 
 const CORAL = "#FF7A6B";
@@ -53,6 +55,15 @@ export function HrDashboardClient() {
   const [rolesFilled, setRolesFilled] = useState(0);
   const [salary, setSalary] = useState(8);
   const [feePercent, setFeePercent] = useState(20);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<HrData["auditLogs"]>([]);
+
+  async function openAuditTrail() {
+    const response = await fetch("/api/skills/verify");
+    const result = (await response.json()) as { logs?: HrData["auditLogs"] };
+    setAuditLogs(result.logs ?? []);
+    setAuditOpen(true);
+  }
 
   useEffect(() => {
     fetch("/api/hr")
@@ -73,7 +84,7 @@ export function HrDashboardClient() {
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-8 lg:px-8">
-      <div><p className="mb-2 text-xs font-medium uppercase tracking-[0.22em] text-primary">People intelligence</p><h1 className="font-heading text-4xl font-semibold tracking-tight">HR Dashboard</h1><p className="mt-2 text-sm text-muted-foreground">A clear view of internal mobility, capability coverage, and talent hiding in plain sight.</p></div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-2 text-xs font-medium uppercase tracking-[0.22em] text-primary">People intelligence</p><h1 className="font-heading text-4xl font-semibold tracking-tight">HR Dashboard</h1><p className="mt-2 text-sm text-muted-foreground">A clear view of internal mobility, capability coverage, and talent hiding in plain sight.</p></div><Button variant="outline" onClick={() => void openAuditTrail()}><ClipboardList /> Audit Trail</Button></div>
       {loading && <Card><CardContent className="py-16 text-center text-sm text-muted-foreground">Loading workforce metrics...</CardContent></Card>}
       {error && <Card><CardContent className="py-16 text-center text-sm text-destructive">{error}</CardContent></Card>}
       {data && <>
@@ -95,6 +106,7 @@ export function HrDashboardClient() {
           <Card className="border-primary/30 bg-[linear-gradient(145deg,rgba(198,244,50,0.09),transparent_55%)]"><CardHeader><CardTitle>Cost avoidance calculator</CardTitle><p className="text-sm text-muted-foreground">Model the agency fee avoided by filling roles internally.</p></CardHeader><CardContent className="grid gap-4"><label className="grid gap-2 text-sm font-medium">Roles filled internally<Input type="number" min="0" value={rolesFilled} onChange={(event) => setRolesFilled(Number(event.target.value) || 0)} /></label><label className="grid gap-2 text-sm font-medium">Avg. external salary <span className="font-normal text-muted-foreground">(Rs lakhs)</span><Input type="number" min="0" value={salary} onChange={(event) => setSalary(Number(event.target.value) || 0)} /></label><label className="grid gap-2 text-sm font-medium">Agency fee <span className="font-normal text-muted-foreground">(%)</span><Input type="number" min="0" max="100" value={feePercent} onChange={(event) => setFeePercent(Number(event.target.value) || 0)} /></label><div className="mt-2 flex items-end justify-between border-t border-border pt-4"><div><p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Total cost avoided</p><p className="mt-1 font-heading text-4xl font-semibold text-primary">Rs {costAvoided.toFixed(1)}L</p></div><Coins className="size-7 text-primary" /></div><p className="text-xs text-muted-foreground">{rolesFilled} roles × Rs {salary}L × {feePercent}% agency fee</p></CardContent></Card>
         </div>
       </>}
+      {auditOpen && <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-4 sm:items-center"><Card className="max-h-[80vh] w-full max-w-xl overflow-hidden"><CardHeader className="flex-row items-center justify-between"><div><CardTitle>Audit Trail</CardTitle><p className="text-sm text-muted-foreground">Recent skill verification events.</p></div><Button variant="ghost" size="icon" onClick={() => setAuditOpen(false)} aria-label="Close audit trail"><X /></Button></CardHeader><CardContent className="max-h-[60vh] overflow-y-auto"><div className="grid gap-2">{auditLogs?.length ? auditLogs.map((log) => <div key={log.id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm"><div><p className="font-medium">{log.skillName}</p><p className="text-xs text-muted-foreground">{log.employee_id} · {new Date(log.created_at).toLocaleString()}</p></div><Badge variant={log.action === "confirmed" ? "default" : "destructive"}>{log.action === "confirmed" ? "Confirmed" : "Not accurate"}</Badge></div>) : <p className="py-8 text-sm text-muted-foreground">No verification events yet.</p>}</div></CardContent></Card></div>}
     </div>
   );
 }
