@@ -19,8 +19,8 @@ export function NavBar() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-3 px-6 py-3 sm:flex-nowrap sm:gap-8 sm:py-0">
+    <header className="sticky top-3 z-50 mx-3 rounded-2xl border border-border/70 bg-background/75 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 sm:mx-6">
+      <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap sm:gap-6 sm:px-6 sm:py-0">
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <span className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_12px_var(--primary)]" />
           <span className="font-heading text-lg font-semibold tracking-tight">

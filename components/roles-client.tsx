@@ -76,8 +76,8 @@ function RoleCard({
     <Card
       onClick={onSelect}
       className={cn(
-        "cursor-pointer transition-colors",
-        isSelected ? "border-primary" : "hover:border-muted-foreground/40"
+        "interactive-lift cursor-pointer",
+        isSelected ? "border-primary shadow-[0_0_24px_rgba(198,244,50,0.16)]" : "hover:border-muted-foreground/40"
       )}
     >
       <CardHeader>

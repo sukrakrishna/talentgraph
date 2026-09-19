@@ -129,6 +129,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(circle at 8% 0%, rgba(198, 244, 50, 0.08), transparent 28rem);
+    background-attachment: fixed;
   }
   select option {
     background-color: var(--card);
@@ -154,6 +156,14 @@
 }
 
 @layer utilities {
+  .glass-panel {
+    @apply border border-border/70 bg-card/80 shadow-[0_12px_36px_rgba(0,0,0,0.08)] backdrop-blur-xl;
+  }
+
+  .interactive-lift {
+    @apply transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_0_24px_rgba(198,244,50,0.14)];
+  }
+
   .pdf-avoid-break {
     break-inside: avoid;
     page-break-inside: avoid;

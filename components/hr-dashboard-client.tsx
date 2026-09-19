@@ -44,7 +44,7 @@ function KpiCard({ label, value, detail, icon: Icon }: { label: string; value: s
   return (
     <Card>
       <CardContent className="flex items-start justify-between gap-3">
-        <div><p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-3 font-heading text-3xl font-semibold tracking-tight">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>
+        <div><p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">{label}</p><p className="mt-3 font-heading text-3xl font-semibold tracking-tight">{value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p><div className="mt-4 flex h-5 items-end gap-1" aria-hidden="true">{[35, 48, 44, 68, 58, 78].map((height, index) => <span key={index} className="w-1.5 rounded-full bg-primary/70" style={{ height: `${height}%` }} />)}</div></div>
         <span className="flex size-9 items-center justify-center rounded-lg bg-secondary text-primary"><Icon className="size-4" /></span>
       </CardContent>
     </Card>

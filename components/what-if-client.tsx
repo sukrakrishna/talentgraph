@@ -38,8 +38,8 @@ function ScoreRing({ score, baseline }: { score: number; baseline: number }) {
   const circumference = 2 * Math.PI * radius;
 
   return (
-    <div className="relative mx-auto h-64 w-64">
-      <svg className="h-full w-full -rotate-90" viewBox="0 0 220 220" aria-label={`${score}% match`}>
+    <div className="relative mx-auto h-64 w-64 rounded-full ring-1 ring-primary/15">
+      <svg className="h-full w-full -rotate-90 drop-shadow-[0_0_18px_rgba(198,244,50,0.2)]" viewBox="0 0 220 220" aria-label={`${score}% match`}>
         <circle cx="110" cy="110" r={radius} fill="none" stroke="var(--secondary)" strokeWidth="14" />
         <motion.circle
           cx="110"
@@ -200,7 +200,7 @@ export function WhatIfClient() {
             <CardContent className="grid gap-2">
               {data?.courses.map((course) => {
                 const selected = selectedCourseIds.includes(course.id);
-                return <div key={course.id} className={`grid gap-3 rounded-xl border p-4 transition-colors sm:grid-cols-[minmax(0,1fr)_auto] ${selected ? "border-primary/60 bg-primary/5" : "border-border hover:border-muted-foreground/50"}`}>
+                return <div key={course.id} className={`interactive-lift grid gap-3 rounded-xl border p-4 transition-colors sm:grid-cols-[minmax(0,1fr)_auto] ${selected ? "border-primary/60 bg-primary/5" : "border-border hover:border-muted-foreground/50"}`}>
                   <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="font-medium">{course.title}</h3><Badge variant="outline">{course.importance}</Badge></div><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1"><Clock3 className="size-3" />{course.hours} hours</span><span>adds {course.skill_name}</span><span className="font-medium text-primary">+{coursePoints(course)} pts live</span></div></div>
                   <Button variant={selected ? "secondary" : "outline"} onClick={() => toggleCourse(course.id)} aria-pressed={selected}>{selected ? <Check /> : <Plus />}{selected ? "Added" : "Add"}</Button>
                 </div>;
@@ -216,9 +216,9 @@ export function WhatIfClient() {
         </div>
       </div>
 
-      <Card>
+      <Card className="interactive-lift">
         <CardHeader className="flex-row items-end justify-between gap-4"><div><CardTitle>Roadmap</CardTitle><p className="text-sm text-muted-foreground">A practical next sequence at 3 hours per week.</p></div><ExportPdfButton targetId="whatif-roadmap-report" filename={`${data?.employee.name ?? "employee"}-what-if-roadmap.pdf`} label="Export Roadmap PDF" /></CardHeader>
-        <CardContent>{roadmap.length === 0 ? <p className="py-3 text-sm text-muted-foreground">Add a course to generate Ravi&apos;s learning roadmap.</p> : <ol className="grid gap-3 md:grid-cols-2">{roadmap.map((step, index) => <li key={`${step.label}-${index}`} className="flex gap-3 rounded-xl bg-secondary/60 p-4"><span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{index + 1}</span><div><p className="font-medium">{step.label}</p><p className="mt-1 text-xs text-muted-foreground">{step.detail}</p></div>{index < roadmap.length - 1 && <ArrowRight className="ml-auto mt-1 hidden size-4 text-muted-foreground md:block" />}</li>)}</ol>}</CardContent>
+        <CardContent>{roadmap.length === 0 ? <p className="py-3 text-sm text-muted-foreground">Add a course to generate Ravi&apos;s learning roadmap.</p> : <ol className="grid gap-3 md:grid-cols-2">{roadmap.map((step, index) => <li key={`${step.label}-${index}`} className="interactive-lift flex gap-3 rounded-xl border border-border/70 bg-secondary/60 p-4"><span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-[0_0_12px_rgba(198,244,50,0.2)]">{index + 1}</span><div><p className="font-medium">{step.label}</p><p className="mt-1 text-xs text-muted-foreground">{step.detail}</p></div>{index < roadmap.length - 1 && <ArrowRight className="ml-auto mt-1 hidden size-4 text-muted-foreground md:block" />}</li>)}</ol>}</CardContent>
       </Card>
     </div>
   );
