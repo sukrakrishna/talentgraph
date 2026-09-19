@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, DM_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { NavBar } from "@/components/nav-bar";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const bricolage = Bricolage_Grotesque({
   variable: "--font-heading",
@@ -28,13 +29,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`dark ${bricolage.variable} ${dmSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+      className={`${bricolage.variable} ${dmSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <TooltipProvider>
-          <NavBar />
-          <main className="flex-1">{children}</main>
-        </TooltipProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <TooltipProvider>
+            <NavBar />
+            <main className="flex-1">{children}</main>
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

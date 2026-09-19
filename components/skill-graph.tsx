@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "next-themes";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), { ssr: false });
 
@@ -23,16 +24,10 @@ interface SkillGraphProps {
   onSelectSkill?: (skill: GraphSkill | null) => void;
 }
 
-// Mirrors the theme tokens in app/globals.css. Canvas fillStyle can't read CSS
-// custom properties, so the hexes are duplicated here rather than referenced.
 const COLOR_EMPLOYEE = "#fbbf24"; // --chart-5
-const COLOR_EXPLICIT = "#94a3b8"; // solid blue-grey for explicit skills
 const COLOR_INFERRED = "#c6f432"; // --chart-1 / --primary — the "AI-inferred" lime
-const COLOR_LINK = "rgba(232, 236, 241, 0.22)";
 const COLOR_INFERRED_LINK = "rgba(198, 244, 50, 0.4)";
 const COLOR_DERIVED_LINK = "rgba(198, 244, 50, 0.4)";
-const COLOR_NODE_RING = "rgba(13, 16, 20, 0.65)";
-const COLOR_LABEL = "#e8ecf1";
 
 const EMPLOYEE_NODE_ID = "__employee__";
 const REVEAL_STEP_MS = 120;
@@ -67,6 +62,12 @@ export function SkillGraph({
   hiddenSkillIds = EMPTY_HIDDEN_IDS,
   onSelectSkill,
 }: SkillGraphProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme !== "light";
+  const colorExplicit = isDark ? "#94a3b8" : "#64748b";
+  const colorLink = isDark ? "rgba(232, 236, 241, 0.22)" : "rgba(9, 9, 11, 0.22)";
+  const colorNodeRing = isDark ? "rgba(13, 16, 20, 0.65)" : "rgba(255, 255, 255, 0.9)";
+  const colorLabel = isDark ? "#e8ecf1" : "#09090b";
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [size, setSize] = useState({ width: 0, height: 480 });
 
@@ -160,12 +161,12 @@ export function SkillGraph({
           graphData={{ nodes, links }}
           nodeId="id"
           nodeRelSize={1}
-          backgroundColor="#0d1014"
+          backgroundColor={isDark ? "#0d1014" : "#fafafa"}
           cooldownTicks={100}
           linkColor={(link) => {
             const l = link as unknown as GraphLink;
             if (l.kind === "derived") return COLOR_DERIVED_LINK;
-            return l.dashed ? COLOR_INFERRED_LINK : COLOR_LINK;
+            return l.dashed ? COLOR_INFERRED_LINK : colorLink;
           }}
           linkWidth={(link) => ((link as unknown as GraphLink).kind === "derived" ? 1 : 1.4)}
           linkLineDash={(link) => ((link as unknown as GraphLink).dashed ? [2, 2] : null)}
@@ -178,7 +179,7 @@ export function SkillGraph({
             const y = n.y ?? 0;
             const isInferred = n.kind === "skill" && n.source === "inferred";
             const color =
-              n.kind === "employee" ? COLOR_EMPLOYEE : n.source === "explicit" ? COLOR_EXPLICIT : COLOR_INFERRED;
+              n.kind === "employee" ? COLOR_EMPLOYEE : n.source === "explicit" ? colorExplicit : COLOR_INFERRED;
 
             ctx.save();
             if (isInferred) {
@@ -194,7 +195,7 @@ export function SkillGraph({
 
             ctx.setLineDash(isInferred ? [1.5, 1.5] : []);
             ctx.lineWidth = 1.2;
-            ctx.strokeStyle = COLOR_NODE_RING;
+            ctx.strokeStyle = colorNodeRing;
             ctx.stroke();
             ctx.setLineDash([]);
 
@@ -202,7 +203,7 @@ export function SkillGraph({
             ctx.font = `${n.kind === "employee" ? "700 " : "500 "}${fontSize}px system-ui, sans-serif`;
             ctx.textAlign = "left";
             ctx.textBaseline = "middle";
-            ctx.fillStyle = COLOR_LABEL;
+            ctx.fillStyle = colorLabel;
             ctx.fillText(n.label, x + r + 3, y);
           }}
           nodePointerAreaPaint={(node, color, ctx) => {
