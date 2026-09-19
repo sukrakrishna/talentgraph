@@ -26,7 +26,7 @@ interface SkillGraphProps {
 // Mirrors the theme tokens in app/globals.css. Canvas fillStyle can't read CSS
 // custom properties, so the hexes are duplicated here rather than referenced.
 const COLOR_EMPLOYEE = "#fbbf24"; // --chart-5
-const COLOR_EXPLICIT = "#7dd3fc"; // --chart-2
+const COLOR_EXPLICIT = "#94a3b8"; // solid blue-grey for explicit skills
 const COLOR_INFERRED = "#c6f432"; // --chart-1 / --primary — the "AI-inferred" lime
 const COLOR_LINK = "rgba(232, 236, 241, 0.22)";
 const COLOR_INFERRED_LINK = "rgba(198, 244, 50, 0.4)";

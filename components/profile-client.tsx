@@ -231,7 +231,7 @@ export function ProfileClient() {
                 placeholder="e.g. Built an internal dashboard in React with charts for ticket trends..."
               />
               <Button onClick={handleExtract} disabled={extracting || loadingEmployee || !bio.trim()}>
-                {extracting ? "Building skill graph..." : "Build skill graph"}
+                Build skill graph
               </Button>
               {error && <p className="text-sm text-destructive">{error}</p>}
               {notice && !error && <p className="text-sm text-muted-foreground">{notice}</p>}
@@ -306,7 +306,7 @@ export function ProfileClient() {
             <CardHeader>
               <CardTitle>Skill Graph</CardTitle>
               <CardDescription>
-                Click a node for details. Sky-blue solid nodes are explicit skills stated in the
+                Click a node for details. Blue-grey solid nodes are explicit skills stated in the
                 bio; glowing lime nodes with dashed links are AI-inferred.
               </CardDescription>
             </CardHeader>
