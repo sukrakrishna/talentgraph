@@ -130,6 +130,10 @@
   body {
     @apply bg-background text-foreground;
   }
+  select option {
+    background-color: #151a21;
+    color: #e8ecf1;
+  }
   html {
     @apply font-sans;
   }
