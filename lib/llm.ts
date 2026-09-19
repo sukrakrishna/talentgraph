@@ -131,11 +131,11 @@ function extractJson(text: string): unknown {
  * derived from `schema`, one automatic retry (with the validation error fed back
  * to the model), and a cache so repeat demo inputs return instantly.
  */
-export async function generateJson<T extends z.ZodTypeAny>(
+export async function generateJsonWithMeta<T extends z.ZodTypeAny>(
   schema: T,
   prompt: string,
   input?: unknown
-): Promise<z.infer<T>> {
+): Promise<{ data: z.infer<T>; cacheHit: boolean }> {
   const hash = hashKey(prompt, input);
 
   const { data: cached } = await supabaseAdmin
@@ -145,7 +145,7 @@ export async function generateJson<T extends z.ZodTypeAny>(
     .maybeSingle();
   if (cached) {
     const parsed = schema.safeParse(cached.json);
-    if (parsed.success) return parsed.data;
+    if (parsed.success) return { data: parsed.data, cacheHit: true };
   }
 
   const responseSchema = zodToGeminiSchema(schema);
@@ -159,7 +159,7 @@ export async function generateJson<T extends z.ZodTypeAny>(
       const raw = extractJson(text);
       const parsed = schema.parse(raw);
       await supabaseAdmin.from("llm_cache").upsert({ hash, json: parsed });
-      return parsed;
+      return { data: parsed, cacheHit: false };
     } catch (err) {
       lastError = err;
       const message = err instanceof Error ? err.message : String(err);
@@ -167,4 +167,14 @@ export async function generateJson<T extends z.ZodTypeAny>(
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+
+export async function generateJson<T extends z.ZodTypeAny>(
+  schema: T,
+  prompt: string,
+  input?: unknown
+): Promise<z.infer<T>> {
+  const result = await generateJsonWithMeta(schema, prompt, input);
+  return result.data;
 }

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ROLES, ROLE_SKILLS } from "@/data/roles";
 import { SKILLS_BY_ID } from "@/data/skills";
 import { scoreEmployeeForRole } from "@/lib/scoring";
-import { generateJson } from "@/lib/llm";
+import { generateJsonWithMeta } from "@/lib/llm";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { guardText, SECURITY_GUARDRAIL_MESSAGE } from "@/lib/guardrails";
 
@@ -122,6 +122,7 @@ function fallbackAnswer(message: string, context: AssistantContext): { inScope: 
 }
 
 export async function POST(request: Request) {
+  const startedAt = performance.now();
   let body: unknown;
   try {
     body = await request.json();
@@ -163,12 +164,15 @@ export async function POST(request: Request) {
     (skillRows ?? []).map((skill) => ({ ...skill, evidence: skill.evidence ?? "" }))
   );
   let response: { inScope: boolean; answer: string };
+  let cacheHit = false;
   try {
-    response = await generateJson(
+    const generated = await generateJsonWithMeta(
       AssistantResponseSchema,
       buildPrompt(context),
       { message: guardedMessage.text }
     );
+    response = generated.data;
+    cacheHit = generated.cacheHit;
   } catch {
     response = fallbackAnswer(guardedMessage.text, context);
   }
@@ -179,6 +183,8 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ...response,
+    cacheHit,
+    latencyMs: Math.round(performance.now() - startedAt),
     employee: {
       id: context.employee.id,
       name: context.employee.name,
