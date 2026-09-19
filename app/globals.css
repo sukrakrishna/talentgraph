@@ -154,7 +154,30 @@
 }
 
 @layer utilities {
-  .pdf-report {
+  .pdf-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, var(--border) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  body .pdf-print-target,
+  body .pdf-print-target * {
+    visibility: visible !important;
+  }
+
+  body .pdf-print-target {
     --background: #ffffff;
     --foreground: #09090b;
     --card: #ffffff;
@@ -168,19 +191,20 @@
     --border: #e4e4e7;
     --input: #e4e4e7;
     --ring: #18181b;
-    color: var(--foreground);
-    background: var(--background);
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    color: #09090b;
+    background: #ffffff;
+  }
+
+  body .pdf-print-target .pdf-export-control,
+  body .pdf-print-target [data-slot="button"] {
+    display: none !important;
   }
 
   .pdf-avoid-break {
     break-inside: avoid;
     page-break-inside: avoid;
-  }
-
-  .bg-grid {
-    background-image:
-      linear-gradient(to right, var(--border) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--border) 1px, transparent 1px);
-    background-size: 32px 32px;
   }
 }
