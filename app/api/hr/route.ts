@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { EMPLOYEES, EMPLOYEE_SKILLS } from "@/data/employees";
 import { ROLES, ROLE_SKILLS } from "@/data/roles";
 import { SKILLS, SKILLS_BY_ID, skillId } from "@/data/skills";
+import { scoreEmployeeForRole } from "@/lib/scoring";
 
 const AVG_EXTERNAL_SALARY_LAKHS = 8;
 const AGENCY_FEE_PERCENT = 20;
@@ -84,6 +85,38 @@ export async function GET() {
     EMPLOYEE_SKILLS.map((skill) => skill.skill_id).filter((skillId) => allRoleSkillIds.has(skillId))
   );
   const internallyMatchedRoles = new Set(hiddenTalent.map((match) => match.roleId));
+  const leadershipSkills = new Set([
+    "Mentoring", "Team Leadership", "Stakeholder Communication", "Public Speaking", "Conflict Resolution",
+    "Cross-functional Collaboration", "Time Management", "Strategic Planning", "Decision Making", "Coaching",
+    "Performance Management", "Hiring & Interviewing", "Facilitation", "Emotional Intelligence",
+  ]);
+  const distributionCounts = new Map(["Analytics", "Frontend", "Soft Skills", "Leadership", "Support"].map((name) => [name, 0]));
+  for (const skill of EMPLOYEE_SKILLS) {
+    const name = SKILLS_BY_ID.get(skill.skill_id)?.name;
+    const bucket = name && SKILLS_BY_ID.get(skill.skill_id)?.category === "Data & Analytics"
+      ? "Analytics"
+      : name && SKILLS_BY_ID.get(skill.skill_id)?.category === "Engineering"
+        ? "Frontend"
+        : name && SKILLS_BY_ID.get(skill.skill_id)?.category === "Support"
+          ? "Support"
+          : name && leadershipSkills.has(name)
+            ? "Leadership"
+            : "Soft Skills";
+    distributionCounts.set(bucket, (distributionCounts.get(bucket) ?? 0) + 1);
+  }
+
+  const departmentReadiness = departments.map((department) => {
+    const departmentRoles = ROLES.filter((role) => role.department === department);
+    const scores = EMPLOYEES.map((employee) => {
+      const employeeSkills = skillsByEmployee.get(employee.id) ?? new Set<string>();
+      return Math.max(...departmentRoles.map((role) => scoreForRole(employeeSkills, role.id)), 0);
+    });
+    return { department, readiness: Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) };
+  });
+  const averageReadiness = Math.round(
+    departmentReadiness.reduce((sum, item) => sum + item.readiness, 0) / departmentReadiness.length
+  );
+  const fullyUtilized = EMPLOYEE_SKILLS.filter((skill) => skill.proficiency === 3).length;
 
   return NextResponse.json({
     kpis: {
@@ -101,5 +134,24 @@ export async function GET() {
       avgExternalSalaryLakhs: AVG_EXTERNAL_SALARY_LAKHS,
       agencyFeePercent: AGENCY_FEE_PERCENT,
     },
+    analytics: {
+      metrics: [
+        { label: "Internal mobility", value: `${Math.round((new Set(hiddenTalent.map((match) => match.employeeId)).size / EMPLOYEES.length) * 100)}%`, trend: "+12%", positive: true },
+        { label: "Skill gap coverage", value: `${Math.round((coveredRoleSkillIds.size / allRoleSkillIds.size) * 100)}%`, trend: "+8%", positive: true },
+        { label: "Avg. time to fill", value: `${AVG_TIME_TO_FILL_DAYS}d`, trend: "-8%", positive: true },
+        { label: "Fully utilized skills", value: `${Math.round((fullyUtilized / EMPLOYEE_SKILLS.length) * 100)}%`, trend: "+15%", positive: true },
+      ],
+      skillDistribution: [...distributionCounts.entries()].map(([name, value]) => ({ name, value })),
+      departmentReadiness,
+      growthTrend: ["Baseline", "Discovery", "Verification", "Upskilling", "Ready"].map((stage, index) => ({
+        stage,
+        readiness: Math.max(0, averageReadiness - 14 + index * 4),
+      })),
+      skillUtilization: Math.round((fullyUtilized / EMPLOYEE_SKILLS.length) * 100),
+    },
   });
+}
+
+function scoreForRole(employeeSkills: Set<string>, roleId: string): number {
+  return scoreEmployeeForRole(employeeSkills, ROLE_SKILLS.filter((skill) => skill.role_id === roleId)).score;
 }
