@@ -233,6 +233,7 @@ export function ProfileClient() {
               <Button onClick={handleExtract} disabled={extracting || loadingEmployee || !bio.trim()}>
                 Build skill graph
               </Button>
+              {extracting && <p className="text-sm text-muted-foreground">Reading the bio...</p>}
               {error && <p className="text-sm text-destructive">{error}</p>}
               {notice && !error && <p className="text-sm text-muted-foreground">{notice}</p>}
             </CardContent>
