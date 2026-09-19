@@ -1,4 +1,4 @@
-export type SkillSource = "explicit" | "inferred";
+export type SkillSource = "explicit" | "inferred" | "verified";
 export type SkillImportance = "required" | "preferred";
 
 export interface Database {

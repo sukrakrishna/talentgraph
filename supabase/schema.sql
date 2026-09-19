@@ -22,7 +22,7 @@ create table if not exists employees (
 create table if not exists employee_skills (
   employee_id text not null references employees (id) on delete cascade,
   skill_id    text not null references skills (id) on delete cascade,
-  source      text not null check (source in ('explicit', 'inferred')),
+  source      text not null check (source in ('explicit', 'inferred', 'verified')),
   evidence    text,
   proficiency int not null check (proficiency between 1 and 3),
   linked_to   text[] not null default '{}',

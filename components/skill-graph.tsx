@@ -10,7 +10,7 @@ export interface GraphSkill {
   skill_id: string;
   name: string;
   category: string;
-  source: "explicit" | "inferred";
+  source: "explicit" | "inferred" | "verified";
   evidence: string;
   proficiency: number;
   linked_to: string[];
@@ -37,7 +37,7 @@ interface GraphNode {
   id: string;
   label: string;
   kind: "employee" | "skill";
-  source?: "explicit" | "inferred";
+  source?: "explicit" | "inferred" | "verified";
   proficiency?: number;
   skill?: GraphSkill;
   x?: number;

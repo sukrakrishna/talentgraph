@@ -12,7 +12,7 @@ export interface EmployeeDef {
 export interface EmployeeSkillDef {
   employee_id: string;
   skill_id: string;
-  source: "explicit" | "inferred";
+  source: "explicit" | "inferred" | "verified";
   evidence: string;
   proficiency: number;
   /** Explicit skill ids this inferred skill was derived from. Empty for explicit skills. */

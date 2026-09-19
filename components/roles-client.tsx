@@ -13,6 +13,9 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Copy, Send, Sparkles } from "lucide-react";
 
 interface EmployeeSummary {
   id: string;
@@ -65,12 +68,14 @@ function RoleCard({
   isSelected,
   explanation,
   onSelect,
+  onApply,
 }: {
   role: RoleMatch;
   isTop: boolean;
   isSelected: boolean;
   explanation: string | null;
   onSelect: () => void;
+  onApply: () => void;
 }) {
   return (
     <Card
@@ -102,6 +107,9 @@ function RoleCard({
         <ChipRow label="Missing (required)" skills={role.missingRequiredSkills} color={COLOR_MISSING} />
         <ChipRow label="Missing (preferred)" skills={role.missingPreferredSkills} color={COLOR_MISSING} />
         {explanation && <p className="text-sm text-muted-foreground">{explanation}</p>}
+        <Button size="sm" className="mt-1 self-start" onClick={(event) => { event.stopPropagation(); onApply(); }}>
+          <Sparkles className="size-3.5" /> Apply Internally
+        </Button>
       </CardContent>
     </Card>
   );
@@ -120,6 +128,10 @@ export function RolesClient() {
   const [explaining, setExplaining] = useState(false);
 
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [pitchRole, setPitchRole] = useState<RoleMatch | null>(null);
+  const [pitch, setPitch] = useState<string[]>([]);
+  const [pitchLoading, setPitchLoading] = useState(false);
+  const [applicationSubmitted, setApplicationSubmitted] = useState(false);
 
   // Reset the roles/explanations state during render when the employee changes,
   // rather than in an effect — see https://react.dev/learn/you-might-not-need-an-effect
@@ -131,6 +143,7 @@ export function RolesClient() {
     setExplanations(new Map());
     setExplaining(false);
     setSelectedRoleId(null);
+    setPitchRole(null);
   }
 
   useEffect(() => {
@@ -214,6 +227,27 @@ export function RolesClient() {
     if (sentence) return sentence;
     if (explaining) return "Generating explanation...";
     return null;
+  }
+
+  async function generatePitch(role: RoleMatch) {
+    setPitchRole(role);
+    setPitch([]);
+    setApplicationSubmitted(false);
+    setPitchLoading(true);
+    try {
+      const response = await fetch("/api/pitch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId, roleId: role.role_id }),
+      });
+      const data = (await response.json()) as { paragraphs?: string[]; error?: string };
+      if (!response.ok || data.error) throw new Error(data.error ?? "Pitch generation failed");
+      setPitch(data.paragraphs ?? []);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setPitchLoading(false);
+    }
   }
 
   return (
@@ -309,10 +343,25 @@ export function RolesClient() {
                 isSelected={role.role_id === selectedRoleId}
                 explanation={explanationFor(role, index)}
                 onSelect={() => setSelectedRoleId(role.role_id)}
+                onApply={() => void generatePitch(role)}
               />
             ))}
         </div>
       </div>
+      <Dialog open={pitchRole !== null} onOpenChange={(open) => !open && setPitchRole(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Internal mobility pitch · {pitchRole?.title}</DialogTitle>
+            <DialogDescription>AI-crafted from the selected employee&apos;s current skills, match score, and gap bridge plan.</DialogDescription>
+          </DialogHeader>
+          {pitchLoading ? <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground"><Sparkles className="size-4 animate-pulse text-primary" />Writing a grounded transfer pitch...</div> : <div className="grid gap-4">{pitch.map((paragraph, index) => <p key={index} className="rounded-xl border border-border/70 bg-secondary/40 p-4 text-sm leading-7">{paragraph}</p>)}</div>}
+          <DialogFooter>
+            <Button variant="outline" disabled={pitch.length === 0} onClick={() => void navigator.clipboard?.writeText(pitch.join("\n\n"))}><Copy /> Copy Pitch</Button>
+            <Button disabled={pitchLoading || pitch.length === 0} onClick={() => setApplicationSubmitted(true)}><Send /> {applicationSubmitted ? "Application Submitted" : "Submit Application"}</Button>
+          </DialogFooter>
+          {applicationSubmitted && <p className="text-sm font-medium text-primary">Application submitted to the hiring team.</p>}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

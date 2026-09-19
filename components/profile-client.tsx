@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, X } from "lucide-react";
+import { Brain, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { GraphSkill, SkillGraph } from "@/components/skill-graph";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface EmployeeSummary {
   id: string;
@@ -28,6 +29,12 @@ interface EmployeeDetail {
   job_title: string;
   department: string;
   bio: string;
+}
+
+interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
 }
 
 const DEFAULT_EMPLOYEE_ID = "ravi-k";
@@ -49,6 +56,11 @@ export function ProfileClient() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [roleScores, setRoleScores] = useState<{ title: string; score: number }[]>([]);
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
+  const [quizResult, setQuizResult] = useState<{ score: number; feedback: string; verified: boolean } | null>(null);
 
   // Loading is derived rather than tracked in its own state: the employee record
   // only ever matches employeeId once its fetch has resolved.
@@ -85,6 +97,9 @@ export function ProfileClient() {
         setConfirmedSkillIds(new Set());
         setRemovedSkillIds(new Set());
         setRoleScores([]);
+        setQuizOpen(false);
+        setQuizQuestions([]);
+        setQuizResult(null);
         setError(null);
       })
       .catch((err) => !cancelled && setError(err instanceof Error ? err.message : String(err)));
@@ -150,6 +165,46 @@ export function ProfileClient() {
       setNotice(`Saved ${action === "confirmed" ? "confirmation" : "correction"}; role scores updated.`);
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function startQuiz() {
+    if (!selectedSkill) return;
+    setQuizOpen(true);
+    setQuizLoading(true);
+    setQuizQuestions([]);
+    setQuizAnswers({});
+    setQuizResult(null);
+    try {
+      const response = await fetch("/api/quiz", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "generate", employeeId, skillId: selectedSkill.skill_id }) });
+      const data = (await response.json()) as { questions?: QuizQuestion[]; error?: string };
+      if (!response.ok || data.error) throw new Error(data.error ?? "Quiz generation failed");
+      setQuizQuestions(data.questions ?? []);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+      setQuizOpen(false);
+    } finally {
+      setQuizLoading(false);
+    }
+  }
+
+  async function submitQuiz() {
+    if (!selectedSkill || quizQuestions.some((question) => !quizAnswers[question.id])) return;
+    setQuizLoading(true);
+    try {
+      const response = await fetch("/api/quiz", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "evaluate", employeeId, skillId: selectedSkill.skill_id, questions: quizQuestions, answers: quizAnswers }) });
+      const data = (await response.json()) as { score?: number; feedback?: string; verified?: boolean; roleScores?: { title: string; score: number }[]; error?: string };
+      if (!response.ok || data.error) throw new Error(data.error ?? "Quiz evaluation failed");
+      setQuizResult({ score: data.score ?? 0, feedback: data.feedback ?? "", verified: data.verified ?? false });
+      if (data.verified) {
+        setSkills((current) => current.map((skill) => skill.skill_id === selectedSkill.skill_id ? { ...skill, source: "verified" } : skill));
+        setSelectedSkill((skill) => skill ? { ...skill, source: "verified" } : skill);
+        setRoleScores(data.roleScores ?? []);
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setQuizLoading(false);
     }
   }
 
@@ -357,8 +412,8 @@ export function ProfileClient() {
               </CardHeader>
               <CardContent className="flex flex-col gap-3 text-sm">
                 <div className="flex items-center gap-2">
-                  <Badge variant={selectedSkill.source === "explicit" ? "default" : "secondary"}>
-                    {selectedSkill.source === "explicit" ? "Explicit" : "AI-discovered"}
+                  <Badge variant={selectedSkill.source === "verified" ? "default" : selectedSkill.source === "explicit" ? "default" : "secondary"}>
+                    {selectedSkill.source === "verified" ? "Verified" : selectedSkill.source === "explicit" ? "Explicit" : "AI-discovered"}
                   </Badge>
                   <span className="text-muted-foreground">
                     Proficiency {selectedSkill.proficiency}/3
@@ -378,6 +433,7 @@ export function ProfileClient() {
                   </p>
                 )}
                 <div className="flex gap-2 pt-1">
+                  {selectedSkill.source !== "verified" && <Button size="sm" variant="secondary" onClick={() => void startQuiz()}><Brain className="size-3.5" /> Verify Skill via AI Quiz</Button>}
                   <Button
                     size="sm"
                     variant={confirmedSkillIds.has(selectedSkill.skill_id) ? "secondary" : "default"}
@@ -400,6 +456,13 @@ export function ProfileClient() {
           )}
         </div>
       </div>
+      <Dialog open={quizOpen} onOpenChange={setQuizOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>AI skill verification · {selectedSkill?.name}</DialogTitle><DialogDescription>Answer three quick questions. A score of 80% or higher marks this skill as verified.</DialogDescription></DialogHeader>
+          {quizLoading && quizQuestions.length === 0 ? <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground"><Brain className="size-4 animate-pulse text-primary" />Generating your verification quiz...</div> : quizResult ? <div className="grid gap-4"><div className="rounded-2xl border border-primary/30 bg-primary/10 p-6 text-center"><p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Quiz score</p><p className="mt-2 font-heading text-5xl font-semibold text-primary">{quizResult.score}%</p><p className="mt-2 text-sm">{quizResult.verified ? "Skill verified and role scores refreshed." : "Keep practicing and try again."}</p></div><p className="text-sm leading-6 text-muted-foreground">{quizResult.feedback}</p></div> : <div className="grid gap-5">{quizQuestions.map((question, index) => <fieldset key={question.id} className="grid gap-3"><legend className="text-sm font-medium">{index + 1}. {question.question}</legend><div className="grid gap-2 sm:grid-cols-2">{question.options.map((option) => <label key={option} className="flex cursor-pointer items-start gap-2 rounded-xl border border-border/70 bg-secondary/40 p-3 text-sm transition-colors hover:border-primary/50"><input type="radio" name={question.id} value={option} checked={quizAnswers[question.id] === option} onChange={() => setQuizAnswers((answers) => ({ ...answers, [question.id]: option }))} className="mt-0.5 accent-[var(--primary)]" />{option}</label>)}</div></fieldset>)}</div>}
+          <DialogFooter>{quizResult ? <Button onClick={() => setQuizOpen(false)}>Done</Button> : <Button disabled={quizLoading || quizQuestions.length !== 3 || quizQuestions.some((question) => !quizAnswers[question.id])} onClick={() => void submitQuiz()}>Submit Quiz</Button>}</DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
