@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ExportPdfButton } from "@/components/ExportPdfButton";
 
 interface HrData {
   kpis: {
@@ -83,8 +84,8 @@ export function HrDashboardClient() {
   const costAvoided = rolesFilled * salary * (feePercent / 100);
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-8 lg:px-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-2 text-xs font-medium uppercase tracking-[0.22em] text-primary">People intelligence</p><h1 className="font-heading text-4xl font-semibold tracking-tight">HR Dashboard</h1><p className="mt-2 text-sm text-muted-foreground">A clear view of internal mobility, capability coverage, and talent hiding in plain sight.</p></div><Button variant="outline" onClick={() => void openAuditTrail()}><ClipboardList /> Audit Trail</Button></div>
+    <div id="hr-executive-report" className="pdf-report mx-auto flex max-w-7xl flex-col gap-8 px-6 py-8 lg:px-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-2 text-xs font-medium uppercase tracking-[0.22em] text-primary">People intelligence</p><h1 className="font-heading text-4xl font-semibold tracking-tight">HR Dashboard</h1><p className="mt-2 text-sm text-muted-foreground">A clear view of internal mobility, capability coverage, and talent hiding in plain sight.</p></div><div className="flex flex-wrap gap-2"><ExportPdfButton targetId="hr-executive-report" filename="talentgraph-hr-executive-report.pdf" /><Button variant="outline" onClick={() => void openAuditTrail()}><ClipboardList /> Audit Trail</Button></div></div>
       {loading && <Card><CardContent className="py-16 text-center text-sm text-muted-foreground">Loading workforce metrics...</CardContent></Card>}
       {error && <Card><CardContent className="py-16 text-center text-sm text-destructive">{error}</CardContent></Card>}
       {data && <>

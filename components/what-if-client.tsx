@@ -9,6 +9,7 @@ import { scoreEmployeeForRole, type ScoreBreakdown } from "@/lib/scoring";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExportPdfButton } from "@/components/ExportPdfButton";
 
 interface Course {
   id: string;
@@ -20,6 +21,7 @@ interface Course {
 }
 
 interface WhatIfData {
+  employee: { id: string; name: string };
   employeeSkillIds: string[];
   role: { id: string; title: string };
   roleSkills: { id: string; name: string; importance: "required" | "preferred" }[];
@@ -150,12 +152,12 @@ export function WhatIfClient() {
   const score = current?.score ?? baseline;
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-8 lg:px-8">
+    <div id="whatif-roadmap-report" className="pdf-report mx-auto flex max-w-7xl flex-col gap-8 px-6 py-8 lg:px-8">
       <div className="flex flex-col gap-1 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="mb-2 text-xs font-medium uppercase tracking-[0.22em] text-primary">Scenario planner</p>
           <h1 className="font-heading text-4xl font-semibold tracking-tight">What would move the match?</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Build a focused learning plan and watch the role match update instantly.</p>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Build a focused learning plan for {data?.employee.name ?? "your employee"} and watch the role match update instantly.</p>
         </div>
         <Button variant="outline" onClick={() => setSelectedCourseIds([])} disabled={selectedCourseIds.length === 0}>
           <RotateCcw /> Reset
@@ -215,7 +217,7 @@ export function WhatIfClient() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Roadmap</CardTitle><p className="text-sm text-muted-foreground">A practical next sequence at 3 hours per week.</p></CardHeader>
+        <CardHeader className="flex-row items-end justify-between gap-4"><div><CardTitle>Roadmap</CardTitle><p className="text-sm text-muted-foreground">A practical next sequence at 3 hours per week.</p></div><ExportPdfButton targetId="whatif-roadmap-report" filename={`${data?.employee.name ?? "employee"}-what-if-roadmap.pdf`} label="Export Roadmap PDF" /></CardHeader>
         <CardContent>{roadmap.length === 0 ? <p className="py-3 text-sm text-muted-foreground">Add a course to generate Ravi&apos;s learning roadmap.</p> : <ol className="grid gap-3 md:grid-cols-2">{roadmap.map((step, index) => <li key={`${step.label}-${index}`} className="flex gap-3 rounded-xl bg-secondary/60 p-4"><span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{index + 1}</span><div><p className="font-medium">{step.label}</p><p className="mt-1 text-xs text-muted-foreground">{step.detail}</p></div>{index < roadmap.length - 1 && <ArrowRight className="ml-auto mt-1 hidden size-4 text-muted-foreground md:block" />}</li>)}</ol>}</CardContent>
       </Card>
     </div>

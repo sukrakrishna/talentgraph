@@ -154,6 +154,29 @@
 }
 
 @layer utilities {
+  .pdf-report {
+    --background: #ffffff;
+    --foreground: #09090b;
+    --card: #ffffff;
+    --card-foreground: #09090b;
+    --popover: #ffffff;
+    --popover-foreground: #09090b;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #18181b;
+    --muted: #f4f4f5;
+    --muted-foreground: #52525b;
+    --border: #e4e4e7;
+    --input: #e4e4e7;
+    --ring: #18181b;
+    color: var(--foreground);
+    background: var(--background);
+  }
+
+  .pdf-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   .bg-grid {
     background-image:
       linear-gradient(to right, var(--border) 1px, transparent 1px),
